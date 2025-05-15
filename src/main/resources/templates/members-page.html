@@ -1,0 +1,47 @@
+<div>
+    <h3>Member Registration</h3>
+    <form action="#" th:action="@{/createMember}" th:object="${member}" method="post">
+        <div>
+            <label for="name">Name</label>
+            <input type="text" th:field="*{name}" id="name" placeholder="Name">
+            <span style="color:red" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></span>
+        </div>
+        <div>
+            <label for="email">Email</label>
+            <input type="text" th:field="*{email}" id="email" placeholder="Email">
+            <span style="color:red" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></span>
+        </div>
+        <div>
+            <label for="phoneNumber">Phone #</label>
+            <input type="text" th:field="*{phoneNumber}" id="phoneNumber" placeholder="Phone Number">
+            <span style="color:red" th:if="${#fields.hasErrors('phoneNumber')}" th:errors="*{phoneNumber}"></span>
+        </div>
+        <div>
+            <input type="submit" value="Register">
+        </div>
+    </form>
+</div>
+<div>
+    <h3>Members</h3>
+    <table>
+        <thead>
+        <tr>
+            <th>Id</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Phone #</th>
+            <th>REST URL</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="member : ${members}">
+            <td th:text="${member.id}"></td>
+            <td th:text="${member.name}"></td>
+            <td th:text="${member.email}"></td>
+            <td th:text="${member.phoneNumber}"></td>
+            <td><a th:href="@{/members/{id}(id=${member.id})}" th:text="'/members/' + ${member.id}"></a></td>
+        </tr>
+        </tbody>
+    </table>
+    <p>REST URL for all members:<a href="/members">/members</a></p>
+</div>
