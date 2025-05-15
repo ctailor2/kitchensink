@@ -9,8 +9,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -22,12 +21,13 @@ public class MemberIntegrationTest {
     @Autowired
     MockMvc mockMvc;
 
+    String name = "Jane Doe";
+    String email = "jane@mailinator.com";
+    String phoneNumber = "2125551234";
+
     @Test
     @Transactional
     void createsMembers() throws Exception {
-        String name = "Jane Doe";
-        String email = "jane@mailinator.com";
-        String phoneNumber = "2125551234";
         mockMvc.perform(post("/members")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{" +
@@ -51,5 +51,20 @@ public class MemberIntegrationTest {
                 .andExpect(jsonPath("$.name", equalTo(name)))
                 .andExpect(jsonPath("$.email", equalTo(email)))
                 .andExpect(jsonPath("$.phoneNumber", equalTo(phoneNumber)));
+    }
+
+    @Test
+    void providesErrorMessagesIfMemberCannotBeCreatedDueToValidationErrors() throws Exception {
+        mockMvc.perform(post("/members")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{" +
+                                "  \"name\": \"" + name + "\"," +
+                                "  \"email\": \"\"," +
+                                "  \"phoneNumber\": \"" + phoneNumber + "\"" +
+                                "}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors", hasSize(1)))
+                .andExpect(jsonPath("$.errors[0].property", equalTo("email")))
+                .andExpect(jsonPath("$.errors[0].message", equalTo("must not be empty")));
     }
 }
