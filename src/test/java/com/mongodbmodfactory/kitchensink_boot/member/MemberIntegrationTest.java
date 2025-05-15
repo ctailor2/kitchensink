@@ -1,6 +1,8 @@
 package com.mongodbmodfactory.kitchensink_boot.member;
 
 import com.jayway.jsonpath.JsonPath;
+import com.mongodbmodfactory.kitchensink_boot.helpers.TestEventListener;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -9,7 +11,11 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
-import static org.hamcrest.Matchers.*;
+import java.util.EventObject;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -21,9 +27,17 @@ public class MemberIntegrationTest {
     @Autowired
     MockMvc mockMvc;
 
+    @Autowired
+    TestEventListener testEventListener;
+
     String name = "Jane Doe";
     String email = "jane@mailinator.com";
     String phoneNumber = "2125551234";
+
+    @BeforeEach
+    void beforeEach() {
+        testEventListener.reset();
+    }
 
     @Test
     @Transactional
@@ -51,6 +65,8 @@ public class MemberIntegrationTest {
                 .andExpect(jsonPath("$.name", equalTo(name)))
                 .andExpect(jsonPath("$.email", equalTo(email)))
                 .andExpect(jsonPath("$.phoneNumber", equalTo(phoneNumber)));
+
+        assertThat(testEventListener.getAfterCreateEvents().stream().map(EventObject::getSource)).contains(new Member(1L, name, email, phoneNumber));
     }
 
     @Test
