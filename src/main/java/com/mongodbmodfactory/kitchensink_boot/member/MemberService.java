@@ -21,7 +21,7 @@ public class MemberService {
     }
 
     @Transactional(readOnly = true)
-    public Optional<Member> getMemberById(Long id) {
+    public Optional<Member> getMemberById(String id) {
         return memberRepository.findById(id);
     }
 

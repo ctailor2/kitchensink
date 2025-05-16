@@ -1,26 +1,39 @@
 package com.mongodbmodfactory.kitchensink_boot.member;
 
+import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.testcontainers.context.ImportTestcontainers;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.jdbc.Sql;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.testcontainers.containers.MongoDBContainer;
+import org.testcontainers.utility.DockerImageName;
 
 import static org.hamcrest.Matchers.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@Sql(scripts = "/cleanup.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+@ImportTestcontainers
 public class MemberRestIT {
 
     private static final String BASE_URL = "/kitchensink/rest/members";
 
     @Autowired
     private MockMvc mockMvc;
+
+    static MongoDBContainer mongoDBContainer = new MongoDBContainer(DockerImageName.parse("mongo"));
+
+    @DynamicPropertySource
+    static void setProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.data.mongodb.uri", mongoDBContainer::getReplicaSetUrl);
+    }
 
     @Test
     public void testListMembers() throws Exception {
@@ -42,10 +55,10 @@ public class MemberRestIT {
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$", hasSize(greaterThan(0))))
-                .andExpect(jsonPath("$[0].id", notNullValue()))
-                .andExpect(jsonPath("$[0].name", equalTo(name)))
-                .andExpect(jsonPath("$[0].email", equalTo(email)))
-                .andExpect(jsonPath("$[0].phoneNumber", equalTo(phoneNumber)));
+                .andExpect(jsonPath(String.format("$[?(@.email == '%s')].id", email), contains(notNullValue())))
+                .andExpect(jsonPath(String.format("$[?(@.email == '%s')].name", email), contains(name)))
+                .andExpect(jsonPath(String.format("$[?(@.email == '%s')].email", email), contains(email)))
+                .andExpect(jsonPath(String.format("$[?(@.email == '%s')].phoneNumber", email), contains(phoneNumber)));
     }
 
     @Test
@@ -135,10 +148,10 @@ public class MemberRestIT {
                 .getContentAsString();
 
         // Extract the ID from the response using a simple substring (since we know it's valid JSON)
-        String id = responseContent.split("\"id\":")[1].split(",")[0].trim();
+        String memberId = JsonPath.parse(responseContent).read("$.id", String.class);
 
         // Get the member by ID
-        mockMvc.perform(get(BASE_URL + "/" + id))
+        mockMvc.perform(get(BASE_URL + "/" + memberId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name", is("Get By ID Test")))
                 .andExpect(jsonPath("$.email", is(email)))
