@@ -1,1 +1,5 @@
-spring.application.name: kitchensink-boot
+spring:
+  application.name: kitchensink-boot
+  data:
+    mongodb:
+      uri: "mongodb://appUser:appPassword@localhost:27017/app"

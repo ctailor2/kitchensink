@@ -4,7 +4,7 @@ import jakarta.validation.constraints.*;
 import org.springframework.data.annotation.Id;
 
 public record Member(
-        @Id Long id,
+        @Id String id,
         @NotNull
         @Size(min = 1, max = 25)
         @Pattern(regexp = "[^0-9]*", message = "Must not contain numbers") String name,
