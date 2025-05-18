@@ -10,3 +10,4 @@ db.createUser(
             ]
         }
 );
+db.member.createIndex({email: 1}, {unique: true})
