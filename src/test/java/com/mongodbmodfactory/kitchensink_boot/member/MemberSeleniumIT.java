@@ -162,7 +162,7 @@ public class MemberSeleniumIT {
         WebElement memberTableRow = rows.stream().filter((row) -> row.getText().contains(email)).findFirst().orElseThrow();
         List<WebElement> rowData = memberTableRow.findElements(By.tagName("td"));
         WebElement restUrlDatum = rowData.get(rowData.size() - 1);
-        restUrlDatum.click();
+        restUrlDatum.findElement(By.tagName("a")).click();
         String memberRestUrlJson = driver.findElement(By.cssSelector("body pre")).getText();
         JsonParser jsonParser = Json.createParser(new StringReader(memberRestUrlJson));
         jsonParser.next();

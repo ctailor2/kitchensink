@@ -39,7 +39,7 @@
         </div>
         <div>
             <label for="email">Email:</label><br/>
-            <input type="email" id="reg:email" th:field="*{email}"/>
+            <input type="text" id="reg:email" th:field="*{email}"/>
             <span th:if="${#fields.hasErrors('email')}" class="invalid" th:errors="*{email}"></span>
         </div>
         <div>
