@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Member Registration</title>
+    <style>
+        .invalid {
+            color: red;
+        }
+        .messages {
+            color: green;
+        }
+        .simpletablestyle {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .simpletablestyle th, .simpletablestyle td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        .simpletablestyle th {
+            background-color: #f5f5f5;
+        }
+    </style>
+</head>
+<body>
+    <h1>Member Registration</h1>
+
+    <div th:if="${message}" class="messages" th:text="${message}">
+    </div>
+
+    <form id="reg" th:action="@{/kitchensink/register}" method="post" th:object="${member}">
+        <div>
+            <label for="name">Name:</label><br/>
+            <input type="text" id="reg:name" th:field="*{name}"/>
+            <span th:if="${#fields.hasErrors('name')}" class="invalid" th:errors="*{name}"></span>
+        </div>
+        <div>
+            <label for="email">Email:</label><br/>
+            <input type="email" id="reg:email" th:field="*{email}"/>
+            <span th:if="${#fields.hasErrors('email')}" class="invalid" th:errors="*{email}"></span>
+        </div>
+        <div>
+            <label for="phoneNumber">Phone #:</label><br/>
+            <input type="text" id="reg:phoneNumber" th:field="*{phoneNumber}"/>
+            <span th:if="${#fields.hasErrors('phoneNumber')}" class="invalid" th:errors="*{phoneNumber}"></span>
+        </div>
+        <div>
+            <input id="reg:register" type="submit" value="Register"/>
+        </div>
+    </form>
+
+    <h2>Members</h2>
+    <table class="simpletablestyle">
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Phone #</th>
+                <th>REST URL</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="member : ${members}">
+                <td th:text="${member.id}"></td>
+                <td th:text="${member.name}"></td>
+                <td th:text="${member.email}"></td>
+                <td th:text="${member.phoneNumber}"></td>
+                <td>
+                    <a th:href="@{/kitchensink/rest/members/{id}(id=${member.id})}" th:text="@{/rest/members/{id}(id=${member.id})}"></a>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <p>
+        <a href="/kitchensink/rest/members">/rest/members</a>
+    </p>
+</body>
+</html> 
