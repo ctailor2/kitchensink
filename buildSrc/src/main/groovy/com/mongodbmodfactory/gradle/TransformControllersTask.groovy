@@ -1,16 +1,19 @@
 package com.mongodbmodfactory.gradle
 
 import com.github.javaparser.JavaParser
-import com.github.javaparser.ast.CompilationUnit
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration
 import com.github.javaparser.ast.body.MethodDeclaration
-import com.github.javaparser.ast.expr.AnnotationExpr
+import com.github.javaparser.ast.body.FieldDeclaration
+import com.github.javaparser.ast.body.VariableDeclarator
 import com.github.javaparser.ast.expr.MemberValuePair
+import com.github.javaparser.ast.expr.MethodCallExpr
 import com.github.javaparser.ast.expr.NormalAnnotationExpr
 import com.github.javaparser.ast.expr.StringLiteralExpr
+import com.github.javaparser.ast.expr.NameExpr
 import com.github.javaparser.ast.stmt.BlockStmt
 import com.github.javaparser.ast.stmt.ExpressionStmt
 import com.github.javaparser.ast.stmt.ReturnStmt
+import com.github.javaparser.ast.type.ClassOrInterfaceType
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
@@ -38,7 +41,7 @@ class TransformControllersTask extends DefaultTask {
         }
     }
 
-    private void transformFile(File file) {
+    void transformFile(File file) {
         def cu = JavaParser.parse(file)
         
         // Transform package

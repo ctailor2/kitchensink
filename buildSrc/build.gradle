@@ -8,7 +8,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'org.codehaus.groovy:groovy-all:3.0.19'
+    implementation 'org.codehaus.groovy:groovy-all:3.0.22'
     implementation 'org.apache.commons:commons-lang3:3.12.0'
     implementation 'com.github.javaparser:javaparser-core:3.25.5'
     testImplementation 'org.spockframework:spock-core:2.3-groovy-3.0'
