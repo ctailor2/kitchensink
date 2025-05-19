@@ -1,201 +1,135 @@
 package com.mongodbmodfactory.kitchensink_boot.member;
 
-import jakarta.json.*;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
 
-import java.io.IOException;
-import java.io.StringReader;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.time.Duration;
+import static org.hamcrest.Matchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.springframework.test.util.AssertionErrors.assertNotNull;
-
+@SpringBootTest
+@AutoConfigureMockMvc
 public class MemberRestIT {
 
-    private static final String BASE_URL = "http://localhost:8080/kitchensink/rest/members";
-    private HttpClient client;
+    private static final String BASE_URL = "/kitchensink/rest/members";
 
-    @BeforeEach
-    public void setup() {
-        client = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(10))
-                .build();
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Test
+    public void testListMembers() throws Exception {
+        mockMvc.perform(get(BASE_URL))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$", hasSize(greaterThan(0))))
+                .andExpect(jsonPath("$[0]", notNullValue()));
     }
 
     @Test
-    public void testListMembers() throws IOException, InterruptedException {
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(BASE_URL))
-                .GET()
-                .build();
-
-        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-        assertEquals(200, response.statusCode());
-
-        JsonReader jsonReader = Json.createReader(new StringReader(response.body()));
-        JsonArray members = jsonReader.readArray();
-        assertTrue(members.size() >= 0);
-        jsonReader.close();
-    }
-
-    @Test
-    public void testCreateMember() throws IOException, InterruptedException {
+    public void testCreateMember() throws Exception {
         String email = "rest" + System.currentTimeMillis() + "@test.com";
-        JsonObject member = Json.createObjectBuilder()
-                .add("name", "REST Test User")
-                .add("email", email)
-                .add("phoneNumber", "1234567890")
-                .build();
+        String memberJson = String.format("""
+                {
+                    "name": "REST Test User",
+                    "email": "%s",
+                    "phoneNumber": "1234567890"
+                }""", email);
 
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(BASE_URL))
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(member.toString()))
-                .build();
-
-        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-        assertEquals(200, response.statusCode());
+        mockMvc.perform(post(BASE_URL)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(memberJson))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name", is("REST Test User")))
+                .andExpect(jsonPath("$.email", is(email)))
+                .andExpect(jsonPath("$.phoneNumber", is("1234567890")))
+                .andExpect(jsonPath("$.id", notNullValue()));
     }
 
     @Test
-    public void testCreateInvalidMember() throws IOException, InterruptedException {
-        // Test with invalid email
-        JsonObject member = Json.createObjectBuilder()
-                .add("name", "Invalid User")
-                .add("email", "invalid-email")
-                .add("phoneNumber", "1234567890")
-                .build();
+    public void testCreateInvalidMember() throws Exception {
+        String memberJson = """
+                {
+                    "name": "Invalid User",
+                    "email": "invalid-email",
+                    "phoneNumber": "1234567890"
+                }""";
 
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(BASE_URL))
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(member.toString()))
-                .build();
-
-        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-        assertEquals(400, response.statusCode());
-
-        JsonReader jsonReader = Json.createReader(new StringReader(response.body()));
-        JsonObject errorResponse = jsonReader.readObject();
-        assertTrue(errorResponse.containsKey("email"));
-        jsonReader.close();
+        mockMvc.perform(post(BASE_URL)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(memberJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.email", containsString("must be a well-formed email address")));
     }
 
     @Test
-    public void testCreateDuplicateEmail() throws IOException, InterruptedException {
+    public void testCreateDuplicateEmail() throws Exception {
         String email = "duplicate" + System.currentTimeMillis() + "@test.com";
+        String member1Json = String.format("""
+                {
+                    "name": "First User",
+                    "email": "%s",
+                    "phoneNumber": "1234567890"
+                }""", email);
 
         // Create first member
-        JsonObject member1 = Json.createObjectBuilder()
-                .add("name", "First User")
-                .add("email", email)
-                .add("phoneNumber", "1234567890")
-                .build();
+        mockMvc.perform(post(BASE_URL)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(member1Json))
+                .andExpect(status().isOk());
 
-        HttpRequest request1 = HttpRequest.newBuilder()
-                .uri(URI.create(BASE_URL))
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(member1.toString()))
-                .build();
-
-        client.send(request1, HttpResponse.BodyHandlers.ofString());
+        String member2Json = String.format("""
+                {
+                    "name": "Second User",
+                    "email": "%s",
+                    "phoneNumber": "0987654321"
+                }""", email);
 
         // Try to create second member with same email
-        JsonObject member2 = Json.createObjectBuilder()
-                .add("name", "Second User")
-                .add("email", email)
-                .add("phoneNumber", "0987654321")
-                .build();
-
-        HttpRequest request2 = HttpRequest.newBuilder()
-                .uri(URI.create(BASE_URL))
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(member2.toString()))
-                .build();
-
-        HttpResponse<String> response = client.send(request2, HttpResponse.BodyHandlers.ofString());
-        assertEquals(409, response.statusCode());
-
-        JsonReader jsonReader = Json.createReader(new StringReader(response.body()));
-        JsonObject errorResponse = jsonReader.readObject();
-        assertTrue(errorResponse.containsKey("email"));
-        assertEquals("Email taken", errorResponse.getString("email"));
-        jsonReader.close();
+        mockMvc.perform(post(BASE_URL)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(member2Json))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.email", is("Email taken")));
     }
 
     @Test
-    public void testGetMemberById() throws IOException, InterruptedException {
+    public void testGetMemberById() throws Exception {
         // First create a member
         String email = "getbyid" + System.currentTimeMillis() + "@test.com";
-        JsonObject member = Json.createObjectBuilder()
-                .add("name", "Get By ID Test")
-                .add("email", email)
-                .add("phoneNumber", "1234567890")
-                .build();
+        String memberJson = String.format("""
+                {
+                    "name": "Get By ID Test",
+                    "email": "%s",
+                    "phoneNumber": "1234567890"
+                }""", email);
 
-        HttpRequest createRequest = HttpRequest.newBuilder()
-                .uri(URI.create(BASE_URL))
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(member.toString()))
-                .build();
+        String responseContent = mockMvc.perform(post(BASE_URL)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(memberJson))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
 
-        HttpResponse<String> createResponse = client.send(createRequest, HttpResponse.BodyHandlers.ofString());
-        assertEquals(200, createResponse.statusCode());
-
-        // Get the member list to find the ID
-        HttpRequest listRequest = HttpRequest.newBuilder()
-                .uri(URI.create(BASE_URL))
-                .GET()
-                .build();
-
-        HttpResponse<String> listResponse = client.send(listRequest, HttpResponse.BodyHandlers.ofString());
-        JsonReader jsonReader = Json.createReader(new StringReader(listResponse.body()));
-        JsonArray members = jsonReader.readArray();
-        jsonReader.close();
-
-        // Find the member we just created
-        Long memberId = null;
-        for (JsonValue memberValue : members) {
-            JsonObject memberObject = memberValue.asJsonObject();
-            if (memberObject.getString("email").equals(email)) {
-                memberId = Long.valueOf(memberObject.getInt("id"));
-                break;
-            }
-        }
-        assertNotNull("Should find the created member's ID", memberId);
+        // Extract the ID from the response using a simple substring (since we know it's valid JSON)
+        String id = responseContent.split("\"id\":")[1].split(",")[0].trim();
 
         // Get the member by ID
-        HttpRequest getRequest = HttpRequest.newBuilder()
-                .uri(URI.create(BASE_URL + "/" + memberId))
-                .GET()
-                .build();
-
-        HttpResponse<String> getResponse = client.send(getRequest, HttpResponse.BodyHandlers.ofString());
-        assertEquals(200, getResponse.statusCode());
-
-        jsonReader = Json.createReader(new StringReader(getResponse.body()));
-        JsonObject retrievedMember = jsonReader.readObject();
-        jsonReader.close();
-
-        assertEquals(member.getString("name"), retrievedMember.getString("name"));
-        assertEquals(member.getString("email"), retrievedMember.getString("email"));
-        assertEquals(member.getString("phoneNumber"), retrievedMember.getString("phoneNumber"));
+        mockMvc.perform(get(BASE_URL + "/" + id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name", is("Get By ID Test")))
+                .andExpect(jsonPath("$.email", is(email)))
+                .andExpect(jsonPath("$.phoneNumber", is("1234567890")))
+                .andExpect(jsonPath("$.id", notNullValue()));
     }
 
     @Test
-    public void testGetNonExistentMember() throws IOException, InterruptedException {
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(BASE_URL + "/999999"))
-                .GET()
-                .build();
-
-        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-        assertEquals(404, response.statusCode());
+    public void testGetNonExistentMember() throws Exception {
+        mockMvc.perform(get(BASE_URL + "/999999"))
+                .andExpect(status().isNotFound());
     }
 }
