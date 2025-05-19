@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.hamcrest.Matchers.*;
@@ -13,6 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@Sql(scripts = "/cleanup.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 public class MemberRestIT {
 
     private static final String BASE_URL = "/kitchensink/rest/members";
@@ -22,11 +24,28 @@ public class MemberRestIT {
 
     @Test
     public void testListMembers() throws Exception {
+        String name = "List Test User";
+        String email = "rest" + System.currentTimeMillis() + "@test.com";
+        String phoneNumber = "1234567890";
+        String memberJson = String.format("""
+                {
+                    "name": "%s",
+                    "email": "%s",
+                    "phoneNumber": "%s"
+                }""", name, email, phoneNumber);
+        mockMvc.perform(post(BASE_URL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(memberJson))
+                .andExpect(status().isOk());
+
         mockMvc.perform(get(BASE_URL))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$", hasSize(greaterThan(0))))
-                .andExpect(jsonPath("$[0]", notNullValue()));
+                .andExpect(jsonPath("$[0].id", notNullValue()))
+                .andExpect(jsonPath("$[0].name", equalTo(name)))
+                .andExpect(jsonPath("$[0].email", equalTo(email)))
+                .andExpect(jsonPath("$[0].phoneNumber", equalTo(phoneNumber)));
     }
 
     @Test
